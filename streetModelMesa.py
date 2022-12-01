@@ -672,11 +672,7 @@ start_time = time.time()
 model = StreetModel(NUM_AGENTS, M, N)
 while time.time() - start_time < MAX_TIME:
     num_generations += 1
-    #model.step()
-    #model.obtainUnityModel()
     pos = step_model(model)
-
-    #positionsToJSON(pos)
     
 
 
