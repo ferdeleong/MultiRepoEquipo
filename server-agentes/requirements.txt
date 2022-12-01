@@ -1,0 +1,7 @@
+mesa
+numpy
+uvicorn
+fastapi
+pydantic
+typing
+pandas
