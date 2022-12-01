@@ -53,9 +53,6 @@ import pandas as pd
 import random
 import json
 
-#Definimos el siguiente script para manejar los vectores de posición para Unity
-from vector import Vector
-
 # Definimos otros paquetes que vamos a usar para medir el tiempo de ejecución de nuestro algoritmo.
 import time
 import datetime
@@ -63,45 +60,6 @@ import datetime
 
 # # Creación del Modelo
 
-def step_model(model):
-    model.step()
-    return model.obtainUnityModel()
-
-def getState(status):
-    if status == 0.3:
-        return ["true", "false", "false"]
-    elif status == 0.52:
-        return ["false", "true", "false"]
-
-    elif status == 0.7:
-        return ["false", "false", "true"]
-    
-
-def positionsToJSON(positions, states):
-    posDICT = []
-    for p in positions:
-        pos = {
-            "boidId" : str(p[0]),
-            "x" : float(p[1][0]),
-            "y" : float(0),
-            "z" : float(p[1][1]),
-            "direction": str(p[2]),
-            }
-        
-        posDICT.append(pos)
-
-    tfDICT = []
-    for tf in states:
-        statusTF = getState(tf[1])
-        tf = {
-            "tfId" : str(tf[0]),
-            "green" : str(statusTF[0]),
-            "yellow" : str(statusTF[1]),
-            "red" : str(statusTF[2]),
-            }
-        tfDICT.append(tf)
-    
-    return {"positions": posDICT, "trafficLights" : tfDICT}
 
 def obtenerCalle(model):
     '''
@@ -139,32 +97,9 @@ class CarAgent(Agent):
         self.orientation = orientation
         self.direction = direction
         self.nextSteps = []
-        self.movement = "F"
-        self.velocity = self.determineVelocity()
+        self.movement = "F"   
 
-        self.acceleration = Vector(0,0,0)
-        self.max_force = 0.3
-        self.max_speed = 5
-        self.perception = 100
-        self.position = Vector(0, 0)
 
-        
-
-    def determineVelocity(self):
-        '''
-        Este método se utiliza para determinar el vector de velocidad
-        '''
-        if self.orientation == "V":
-            if self.direction == "U":
-                return Vector(1,0,0)
-            else:
-                return Vector(-1,0,0)
-        else:
-            if self.direction == "U":
-                return Vector(0,1,0)
-            else:
-                return Vector(0,-1,0)
-    
     def moveForward(self):
         '''
         Este método se utiliza para avanzar el agente
@@ -310,87 +245,9 @@ class CarAgent(Agent):
         Define el nuevo estado calculado del método step.
         '''
         self.model.grid.move_agent(self, self.nextPos)
+   
 
-
-    def update(self):
-        self.position = Vector(self.pos[0], self.pos[1])
-        self.velocity = self.determineVelocity()
-        self.velocity += self.acceleration
-        #limit
-        if np.linalg.norm(self.velocity) > self.max_speed:
-            self.velocity = self.velocity / np.linalg.norm(self.velocity) * self.max_speed
-
-        self.acceleration = Vector(*np.zeros(2))
-        #print(self.position)  # To show the position at the console
-
-
-    def apply_behaviour(self, boids):
-        alignment = self.align(boids)
-        cohesion = self.cohesion(boids)
-        separation = self.separation(boids)
-
-        self.acceleration += alignment
-        self.acceleration += cohesion
-        self.acceleration += separation
-
-    def align(self, boids):
-        steering = Vector(*np.zeros(2))
-        total = 0
-        avg_vector = Vector(*np.zeros(2))
-        for boid in boids:
-            if np.linalg.norm(boid.position - self.position) < self.perception:
-                avg_vector += boid.velocity
-                total += 1
-        if total > 0:
-            avg_vector /= total
-            avg_vector = Vector(*avg_vector)
-            avg_vector = (avg_vector / np.linalg.norm(avg_vector)) * self.max_speed
-            steering = avg_vector - self.velocity
-
-        return steering
-
-    def cohesion(self, boids):
-        steering = Vector(*np.zeros(2))
-        total = 0
-        center_of_mass = Vector(*np.zeros(2))
-        for boid in boids:
-            if np.linalg.norm(boid.position - self.position) < self.perception:
-                center_of_mass += boid.position
-                total += 1
-        if total > 0:
-            center_of_mass /= total
-            center_of_mass = Vector(*center_of_mass)
-            vec_to_com = center_of_mass - self.position
-            if np.linalg.norm(vec_to_com) > 0:
-                vec_to_com = (vec_to_com / np.linalg.norm(vec_to_com)) * self.max_speed
-            steering = vec_to_com - self.velocity
-            if np.linalg.norm(steering)> self.max_force:
-                steering = (steering /np.linalg.norm(steering)) * self.max_force
-
-        return steering
-
-    def separation(self, boids):
-        steering = Vector(*np.zeros(2))
-        total = 0
-        avg_vector = Vector(*np.zeros(2))
-        for boid in boids:
-            distance = np.linalg.norm(boid.position - self.position)
-            if self.position != boid.position and distance < self.perception:
-                diff = self.position - boid.position
-                diff /= distance
-                avg_vector += diff
-                total += 1
-        if total > 0:
-            avg_vector /= total
-            avg_vector = Vector(*avg_vector)
-            if np.linalg.norm(steering) > 0:
-                avg_vector = (avg_vector / np.linalg.norm(steering)) * self.max_speed
-            steering = avg_vector - self.velocity
-            if np.linalg.norm(steering) > self.max_force:
-                steering = (steering /np.linalg.norm(steering)) * self.max_force
-
-        return steering
-
+ 
 class TrafficLight(Agent):
     '''
     Representa a un semáforo con los tres colores verde, amarillo y rojo.
@@ -498,7 +355,6 @@ class StreetModel(Model):
         
         
         #Posicionar autos hasta un máximo de cuatro a la vez
-        #self.addCars(num)
         maxNumCars = min(4, self.maxNumCars)
         numCars = random.randint(1, maxNumCars)
         self.addCars(numCars)
@@ -510,25 +366,6 @@ class StreetModel(Model):
             model_reporters={'Calle': obtenerCalle},
             agent_reporters={'Movimientos': lambda a: getattr(a, 'numMovimientos', None)},
         )
-
-
-    def obtainUnityModel(self):
-        '''
-        Realiza las adecuaciones necesarias a la posicion para enviarlo a Unity
-        '''
-        
-        positions = []
-        for car in self.cars:
-            car.apply_behaviour(self.cars)
-            car.update()
-            direction = car.direction + car.orientation
-            positions.append([car.unique_id, car.position, direction])
-
-        status = []
-        for tf in self.trafficLights:
-            status.append((tf.unique_id, tf.status)) 
-            
-        return positions,status
             
         
     
@@ -672,7 +509,7 @@ start_time = time.time()
 model = StreetModel(NUM_AGENTS, M, N)
 while time.time() - start_time < MAX_TIME:
     num_generations += 1
-    pos = step_model(model)
+    model.step()
     
 
 
